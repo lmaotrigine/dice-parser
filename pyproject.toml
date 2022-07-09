@@ -5,7 +5,7 @@ description = "A pretty versaitle dice parser"
 authors = ["Varun J <root@5ht2.me>"]
 license = "BSD"
 readme = "README.md"
-include = ["dice_parser/grammar.lark"]
+include = ["LICENSE", "dice_parser/grammar.lark"]
 packages = [{include = "dice_parser"}]
 
 [tool.poetry.dependencies]
