@@ -12,7 +12,7 @@ packages = [{include = "dice_parser"}]
 python = "^3.10"
 lark = "^1.1.2"
 
-[tool.poetry.group.dev.dependencies]
+[tool.poetry.dev-dependencies]
 black = "^22.6.0"
 isort = "^5.10.1"
 
