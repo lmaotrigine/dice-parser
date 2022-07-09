@@ -47,7 +47,7 @@ def ast_adv_copy(ast: N, adv_type: AdvType) -> N:
     if not adv_type:
         return root
     parent = child = root
-    while child.chlidren:  # type: ignore
+    while child.children:  # type: ignore
         parent = child
         parent.left = child = copy.copy(parent.left)  # type: ignore
     
@@ -79,17 +79,17 @@ def simplify_expr_annotations(expr: expression.Number, ambig_inherit: Literal['l
     def do_simplify(node: expression.Number) -> tuple[str, ...]:
         possible_types = []
         child_possibilities = {}
-        for child in node.chlidren:
+        for child in node.children:
             child_possibilities[child] = do_simplify(child)
             possible_types.extend(t for t in child_possibilities[child] if t not in possible_types)
         if node.annotation is not None:
             possible_types.append(node.annotation)
         if len(possible_types) == 1:
             node.annotation = possible_types[0]
-            for child in node.chlidren:
+            for child in node.children:
                 child.annotation = None
         elif len(possible_types) and ambig_inherit is not None:
-            for i, child in enumerate(node.chlidren):
+            for i, child in enumerate(node.children):
                 if child_possibilities[child]:
                     continue
                 elif isinstance(node, expression.BinOp) and node.op in {'*', '/', '//', '%'} and i:
@@ -108,13 +108,13 @@ def simplify_expr(expr: expression.Expression, **kwargs: Any) -> None:
         if node.annotation:
             return expression.Literal(node.total, annotation=node.annotation), True
         had_replacement = set()
-        for i, child in enumerate(node.chlidren):
+        for i, child in enumerate(node.children):
             replacement, branch_had = do_simplify(child)
             if branch_had:
                 had_replacement.add(i)
             if replacement is not child:
                 node.set_child(i, replacement)
-        for i, child in enumerate(node.chlidren):
+        for i, child in enumerate(node.children):
             if (i not in had_replacement) and (had_replacement or first):
                 replacement = expression.Literal(child.total)
                 node.set_child(i, replacement)
@@ -124,29 +124,29 @@ def simplify_expr(expr: expression.Expression, **kwargs: Any) -> None:
 
 def tree_map(func: Callable[[T], T], node: T) -> T:
     copied = copy.copy(node)
-    for i, child in enumerate(copied.chlidren):
+    for i, child in enumerate(copied.children):
         copied.set_child(i, tree_map(func, child))
     return func(copied)
 
 
 def leftmost(root: dice_ast.ChildMixin) -> dice_ast.ChildMixin:
     left = root
-    while left.chlidren:
-        left = left.chlidren[0]
+    while left.children:
+        left = left.children[0]
     return left
 
 
 def rightmost(root: dice_ast.ChildMixin) -> dice_ast.ChildMixin:
     right = root
-    while right.chlidren:
-        right = right.chlidren[-1]
+    while right.children:
+        right = right.children[-1]
     return right
 
 
 def dfs(node: T, predicate: Callable[[T], bool]) -> dice_ast.ChildMixin | None:
     if predicate(node):
         return node
-    for child in node.chlidren:
+    for child in node.children:
         result = dfs(child, predicate)
         if result is not None:
             return result

@@ -94,8 +94,8 @@ class RollResult:
     @property
     def crit(self) -> CritType:
         left = self.expr
-        while left.chlidren:
-            left = left.chlidren[0]
+        while left.children:
+            left = left.children[0]
         if not isinstance(left, Dice):
             return CritType.NONE
         

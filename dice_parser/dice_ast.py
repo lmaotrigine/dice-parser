@@ -96,12 +96,12 @@ class RollTransformer(Transformer):
 
 class ChildMixin:
     @property
-    def chlidren(self) -> list[ChildMixin]:
+    def children(self) -> list[ChildMixin]:
         raise NotImplementedError
     
     @property
     def left(self) -> ChildMixin | None:
-        return self.chlidren[0] if self.chlidren else None
+        return self.children[0] if self.children else None
     
     @left.setter
     def left(self, value: ChildMixin) -> None:
@@ -109,14 +109,14 @@ class ChildMixin:
         
     @property
     def right(self) -> ChildMixin | None:
-        return self.chlidren[-1] if self.chlidren else None
+        return self.children[-1] if self.children else None
     
     @right.setter
     def right(self, value: ChildMixin) -> None:
         self.set_child(-1, value)
     
     def _child_set_check(self, index: int) -> None:
-        if index > (len(self.chlidren) - 1) or index < -len(self.chlidren):
+        if index > (len(self.children) - 1) or index < -len(self.children):
             raise IndexError
     
     def set_child(self, index: int, value: ChildMixin) -> None:
@@ -129,7 +129,7 @@ class Node(abc.ABC, ChildMixin):
         super().set_child(index, value)
     
     @property
-    def chlidren(self) -> list[Node]:
+    def children(self) -> list[Node]:
         raise NotImplementedError
     
     def __str__(self) -> str:
@@ -166,7 +166,7 @@ class AnnotatedNumber(Node):
         self.annotations = [str(a).strip() for a in annotations]
     
     @property
-    def chlidren(self) -> list[Node]:
+    def children(self) -> list[Node]:
         return [self.value]
     
     def set_child(self, index: int, value: Node) -> None:
@@ -188,7 +188,7 @@ class Literal(Node):
             self.value = value
     
     @property
-    def chlidren(self) -> list[Node]:
+    def children(self) -> list[Node]:
         return []
     
     def __str__(self) -> str:
@@ -203,7 +203,7 @@ class Parenthetical(Node):
         self.value = value
     
     @property
-    def chlidren(self) -> list[Node]:
+    def children(self) -> list[Node]:
         return [self.value]
     
     def set_child(self, index: int, value: Node) -> None:
@@ -223,7 +223,7 @@ class UnOp(Node):
         self.value = value
     
     @property
-    def chlidren(self) -> list[Node]:
+    def children(self) -> list[Node]:
         return [self.value]
     
     def set_child(self, index: int, value: Node) -> None:
@@ -248,12 +248,12 @@ class BinOp(Node):
         self.right = right
     
     @property
-    def chlidren(self) -> list[Node]:
+    def children(self) -> list[Node]:
         return [self.left, self.right]
     
     def set_child(self, index: int, value: Node) -> None:
         self._child_set_check(index)
-        if self.chlidren[index] is self.left:
+        if self.children[index] is self.left:
             self.left = value
         else:
             self.right = value
@@ -305,7 +305,7 @@ class OperatedSet(Node):
         self._simplify_operations()
     
     @property
-    def chlidren(self) -> list[Node]:
+    def children(self) -> list[Node]:
         return [self.value]
     
     def set_child(self, index: int, value: Node) -> None:
@@ -337,7 +337,7 @@ class NumberSet(Node):
         self.values = list(values)
     
     @property
-    def chlidren(self) -> list[Node]:
+    def children(self) -> list[Node]:
         return self.values
     
     def set_child(self, index: int, value: Node) -> None:
@@ -373,7 +373,7 @@ class Dice(Node):
             self.size = int(size)
     
     @property
-    def chlidren(self) -> list[Node]:
+    def children(self) -> list[Node]:
         return []
     
     def __str__(self) -> str:

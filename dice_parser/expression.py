@@ -83,7 +83,7 @@ class Number(abc.ABC, ast.ChildMixin):
         return super().set_child(index, value)
     
     @property
-    def chlidren(self) -> list[Self]:
+    def children(self) -> list[Self]:
         raise NotImplementedError
 
 
@@ -104,7 +104,7 @@ class Expression(Number):
         return self.roll.set
     
     @property
-    def chlidren(self) -> list[Number]:
+    def children(self) -> list[Number]:
         return [self.roll]
     
     def set_child(self, index: int, value: Number) -> None:
@@ -132,7 +132,7 @@ class Literal(Number):
         return [self]
     
     @property
-    def chlidren(self) -> list[Number]:
+    def children(self) -> list[Number]:
         return []
     
     def explode(self) -> None:
@@ -167,7 +167,7 @@ class UnOp(Number):
         return [self]
     
     @property
-    def chlidren(self) -> list[Number]:
+    def children(self) -> list[Number]:
         return [self.value]
     
     def set_child(self, index: int, value: Number) -> None:
@@ -218,12 +218,12 @@ class BinOp(Number):
         return [self]
     
     @property
-    def chlidren(self) -> list[Number]:
+    def children(self) -> list[Number]:
         return [self.left, self.right]
     
     def set_child(self, index: int, value: Number) -> None:
         self._child_set_check(index)
-        if self.chlidren[index] is self.left:
+        if self.children[index] is self.left:
             self.left = value
         else:
             self.right = value
@@ -251,7 +251,7 @@ class Parenthetical(Number):
         return self.value.set
     
     @property
-    def chlidren(self) -> list[Number]:
+    def children(self) -> list[Number]:
         return [self.value]
     
     def set_child(self, index: int, value: Number) -> None:
@@ -281,7 +281,7 @@ class Set(Number, Generic[E]):
         return [n for n in self.set if n.kept]
     
     @property
-    def chlidren(self) -> list[E]:
+    def children(self) -> list[E]:
         return self.values
     
     def set_child(self, index: int, value: E) -> None:
@@ -313,7 +313,7 @@ class Dice(Set['Die']):
         self.values.append(Die.new(self.size, context=self._context))
     
     @property
-    def chlidren(self) -> list[Number]:
+    def children(self) -> list[Number]:
         return []
     
     def __repr__(self) -> str:
@@ -347,7 +347,7 @@ class Die(Number):
         return [self.values[-1]]
     
     @property
-    def chlidren(self) -> list[Number]:
+    def children(self) -> list[Number]:
         return []
     
     def _add_roll(self) -> None:
