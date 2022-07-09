@@ -1,0 +1,48 @@
+[tool.poetry]
+name = "dice-parser"
+version = "0.1.0"
+description = "A pretty versaitle dice parser"
+authors = ["Varun J <root@5ht2.me>"]
+license = "BSD"
+readme = "README.md"
+include = ["dice_parser/grammar.lark"]
+packages = [{include = "dice_parser"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+lark = "^1.1.2"
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.6.0"
+isort = "^5.10.1"
+
+[tool.black]
+line-length = 100
+skip-string-normalization = true
+
+[tool.isort]
+profile = "black"
+lines_after_imports = 2
+
+[tool.pyright]
+useLibraryCodeForTypes = true
+typeCheckingMode = "basic"
+pythonVersion = "3.10"
+strictListInference = true
+strictDictionaryInference = true
+strictSetInference = true
+strictParameterNoneValue = true
+reportMissingImports = "error"
+reportUnusedImport = "error"
+reportUnusedClass = "error"
+reportUnusedFunction = "error"
+reportUnusedVariable = "error"
+reportGeneralTypeIssues = "error"
+reportFunctionMemberAccess = "error"
+reportDuplicateImport = "error"
+reportUntypedFunctionDecorator = "error"
+reportUnnecessaryTypeIgnoreComment = "warning"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
