@@ -1,0 +1,40 @@
+name: test
+
+on:
+  push:
+  pull_request:
+    types: [ opened, reopened, synchronize ]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    name: pytest 3.10
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Set up CPython 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install and set up Poetry
+        id: install-poetry
+        run: |
+          curl -fsS -o get-poetry.py https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py
+          python get-poetry.py -y
+          rm -f get-poetry.py
+      
+      - name: Install dependencies
+        if: ${{ always() && steps.install-poetry.outcome == 'success' }}
+        id: install-deps
+        run: |
+          source $HOME/.poetry/env
+          poetry config virtualenvs.create false
+          poetry install -E test
+      
+      - name: Run tests
+        shell: bash
+        run: |
+          PYTHONPATH="$(pwd)" pytest -vs --cov=dice_parser --cov-report term-missing:skip-covered

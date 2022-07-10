@@ -29,6 +29,7 @@ from __future__ import annotations
 
 from lark.lexer import Token
 
+
 __all__ = ('RollError', 'RollSyntaxError', 'RollValueError', 'TooManyRolls')
 
 
