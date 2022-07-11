@@ -30,6 +30,7 @@ jobs:
         if: ${{ always() && steps.install-poetry.outcome == 'success' }}
         run: |
           source $HOME/.poetry/env
+          poetry config virtualenvs.create false
           poetry build -vvv
       
       - name: Install Package
