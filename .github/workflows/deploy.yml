@@ -1,9 +1,9 @@
 name: Deploy
 
 on:
-  release:
-    types:
-      - released
+  push:
+    tags:
+      - '*'
   workflow_dispatch:
 
 env:
@@ -72,14 +72,15 @@ jobs:
           mv ./docs/temp.json ./docs/index.json
       
       - name: Build
-        if: ${{ github.event_name == 'release' }}
+        if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/')
         run: |
-          if [ -d ./docs/${{ env.PUSH_ROOT_PATH }}/${{ github.event.release.tag_name }} ]; then rm -r ./docs/${{ env.PUSH_ROOT_PATH }}/${{ github.event.release.tag_name }}; fi
-          python -m sphinx ${{ env.SPHINX_OPTIONS }} ./${{ github.event.repository.name }}/${{ env.PULL_PATH }} ./docs/${{ env.PUSH_ROOT_PATH }}/${{ github.event.release.tag_name }}
+          tag_name="${GITHUB_REF##*/}"
+          if [ -d ./docs/${{ env.PUSH_ROOT_PATH }}/$tag_name ]; then rm -r ./docs/${{ env.PUSH_ROOT_PATH }}/$tag_name; fi
+          python -m sphinx ${{ env.SPHINX_OPTIONS }} ./${{ github.event.repository.name }}/${{ env.PULL_PATH }} ./docs/${{ env.PUSH_ROOT_PATH }}/$tag_name
           if [ -h ./docs/${{ env.PUSH_ROOT_PATH }}/${{ env.PUSH_STABLE_PATH }} ]; then rm ./docs/${{ env.PUSH_ROOT_PATH }}/${{ env.PUSH_STABLE_PATH }}; fi
-          ln -s ${{ github.event.release.tag_name }} ./docs/${{ env.PUSH_ROOT_PATH }}/${{ env.PUSH_STABLE_PATH }}
+          ln -s "$tag_name" ./docs/${{ env.PUSH_ROOT_PATH }}/${{ env.PUSH_STABLE_PATH }}
           if [ ! -f ./docs/index.json ]; then echo {} > ./docs/index.json ; fi
-          jq 'if has("'"${{ env.PUSH_ROOT_PATH }}"'") then (."'"${{ env.PUSH_ROOT_PATH }}"'".latest = "${{ env.PUSH_LATEST_PATH }}" | ."'"${{ env.PUSH_ROOT_PATH }}"'".stable = "${{ env.PUSH_STABLE_PATH }}" | ."'"${{ env.PUSH_ROOT_PATH }}"'".tags |= . + ["${{ github.event.release.tag_name }}"]) else (."'"${{ env.PUSH_ROOT_PATH }}"'" = {latest: "${{ env.PUSH_LATEST_PATH }}", stable: "${{ env.PUSH_STABLE_PATH }}", tags: ["${{ github.event.release.tag_name }}"]}) end' ./docs/index.json > ./docs/temp.json
+          jq 'if has("'"${{ env.PUSH_ROOT_PATH }}"'") then (."'"${{ env.PUSH_ROOT_PATH }}"'".latest = "${{ env.PUSH_LATEST_PATH }}" | ."'"${{ env.PUSH_ROOT_PATH }}"'".stable = "${{ env.PUSH_STABLE_PATH }}" | ."'"${{ env.PUSH_ROOT_PATH }}"'".tags |= . + ["$tag_name"]) else (."'"${{ env.PUSH_ROOT_PATH }}"'" = {latest: "${{ env.PUSH_LATEST_PATH }}", stable: "${{ env.PUSH_STABLE_PATH }}", tags: ["$tag_name"]}) end' ./docs/index.json > ./docs/temp.json
           mv ./docs/temp.json ./docs/index.json
       
       - name: Push
