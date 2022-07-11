@@ -14,13 +14,13 @@ env:
   COMMIT_MESSAGE: update docs for ${{ github.repository }}
 
   PYTHON_VERSION: '3.10'
-  SPHINX_OPTIONS: -b html -D language=en -a -T -W --keep-going
+  SPHINX_OPTIONS: -b dirhtml -D language=en -a -T -W --keep-going
 
   PULL_INSTALL: -E docs
   PULL_PATH: docs
 
   PUSH_REPOSITORY: ${{ github.repository_owner }}/docs
-  PUSH_ROOT_PATH: ${{ github.event.repository_name }}
+  PUSH_ROOT_PATH: ${{ github.event.repository.name }}
   PUSH_LATEST_PATH: latest
   PUSH_STABLE_PATH: stable
 
@@ -65,7 +65,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           if [ -d ./docs/${{ env.PUSH_ROOT_PATH }}/${{ env.PUSH_LATEST_PATH }} ]; then rm -r ./docs/${{ env.PUSH_ROOT_PATH }}/${{ env.PUSH_LATEST_PATH }}; fi
-          sphinx-build ${{ env.SPHINX_OPTIONS }} ./${{ github.event.repository.name }}/${{ env.PULL_PATH }} ./docs/${{ env.PUSH_ROOT_PATH }}/${{ env.PUSH_LATEST_PATH }}
+          python -m sphinx ${{ env.SPHINX_OPTIONS }} ./${{ github.event.repository.name }}/${{ env.PULL_PATH }} ./docs/${{ env.PUSH_ROOT_PATH }}/${{ env.PUSH_LATEST_PATH }}
           x=${{ env.PUSH_ROOT_PATH }}/${{ env.PUSH_LATEST_PATH }}; y=$x; while [ $y != ${y%/*} ]; do y=${y%/*}; echo '<!DOCTYPE html><html lang="en"><head><meta http-equiv="refresh" content="0;url='"${x#$y/}"'"></head><body></body></html>' > ./docs/$y/index.html; done
           if [ ! -f ./docs/index.json ]; then echo {} > ./docs/index.json; fi
           jq 'if has("'"${{ env.PUSH_ROOT_PATH }}"'") then (."'"${{ env.PUSH_ROOT_PATH }}"'".latest = "${{ env.PUSH_LATEST_PATH }}" | ."'"${{ env.PUSH_ROOT_PATH }}"'".stable = "${{ env.PUSH_STABLE_PATH }}") else (."'"${{ env.PUSH_ROOT_PATH }}"'" = {latest: "${{ env.PUSH_LATEST_PATH }}", stable: "${{ env.PUSH_STABLE_PATH }}", tags: []}) end' ./docs/index.json > ./docs/temp.json
@@ -75,7 +75,7 @@ jobs:
         if: ${{ github.event_name == 'release' }}
         run: |
           if [ -d ./docs/${{ env.PUSH_ROOT_PATH }}/${{ github.event.release.tag_name }} ]; then rm -r ./docs/${{ env.PUSH_ROOT_PATH }}/${{ github.event.release.tag_name }}; fi
-          sphinx-build ${{ env.SPHINX_OPTIONS }} ./${{ github.event.repository.name }}/${{ env.PULL_PATH }} ./docs/${{ env.PUSH_ROOT_PATH }}/${{ github.event.release.tag_name }}
+          python -m sphinx ${{ env.SPHINX_OPTIONS }} ./${{ github.event.repository.name }}/${{ env.PULL_PATH }} ./docs/${{ env.PUSH_ROOT_PATH }}/${{ github.event.release.tag_name }}
           if [ -h ./docs/${{ env.PUSH_ROOT_PATH }}/${{ env.PUSH_STABLE_PATH }} ]; then rm ./docs/${{ env.PUSH_ROOT_PATH }}/${{ env.PUSH_STABLE_PATH }}; fi
           ln -s ${{ github.event.release.tag_name }} ./docs/${{ env.PUSH_ROOT_PATH }}/${{ env.PUSH_STABLE_PATH }}
           if [ ! -f ./docs/index.json ]; then echo {} > ./docs/index.json ; fi
