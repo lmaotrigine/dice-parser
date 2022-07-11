@@ -6,9 +6,9 @@ on:
     types: [ opened, reopened, synchronize ]
 
 jobs:
-  dists:
+  dists-and-docs:
     runs-on: ubuntu-latest
-    name: dists (python3.10)
+    name: dists & docs (python3.10)
     steps:
       - uses: actions/checkout@v3
         with:
@@ -31,3 +31,13 @@ jobs:
         run: |
           source $HOME/.poetry/env
           poetry build -vvv
+      
+      - name: Install Package
+        run: |
+          poetry install -E docs
+        
+      - name: Build docs
+        shell: bash
+        run: |
+          cd docs
+          sphinx-build -b html -D language=en -a -T -W --keep-going . _build/html

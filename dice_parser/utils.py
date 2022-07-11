@@ -44,6 +44,20 @@ E = TypeVar('E', bound=expression.Number)
 
 
 def ast_adv_copy(ast: N, adv_type: AdvType) -> N:
+    """Returns a minimally shallow copy of a dice AST with respect to advantage.
+
+    Parameters
+    ----------
+    node: :class:`dice_parser.ast.Node`
+        The parsed AST
+    adv_type: :class:`AdvType`
+        The advantage type to roll at.
+
+    Returns
+    -------
+    :class:`dice_parser.ast.Node`
+        The copied AST
+    """
     root = copy.copy(ast)
     if not adv_type:
         return root
@@ -52,7 +66,7 @@ def ast_adv_copy(ast: N, adv_type: AdvType) -> N:
         parent = child
         parent.left = child = copy.copy(parent.left)  # type: ignore
 
-    if not isinstance(child, dice_ast.Dice):
+    if not isinstance(child, dice_ast.DiceNode):
         return root
 
     if not (child.num == 1 and child.size == 20):
@@ -68,10 +82,10 @@ def ast_adv_copy(ast: N, adv_type: AdvType) -> N:
     child.num = 2
 
     if adv_type == 1:
-        high_or_low = dice_ast.SetSelector('h', 1)
+        high_or_low = dice_ast.NodeSetSelector('h', 1)
     else:
-        high_or_low = dice_ast.SetSelector('l', 1)
-    kh1 = dice_ast.SetOperator('k', [high_or_low])
+        high_or_low = dice_ast.NodeSetSelector('l', 1)
+    kh1 = dice_ast.NodeSetOperator('k', [high_or_low])
     parent.operations.insert(0, kh1)
     return root
 
@@ -79,6 +93,16 @@ def ast_adv_copy(ast: N, adv_type: AdvType) -> N:
 def simplify_expr_annotations(
     expr: expression.Number, ambig_inherit: Literal['left', 'right', None] = None
 ) -> None:
+    """Transforms an expression in place by simplifying the annotations using a bubble-up method.
+
+    Parameters
+    ----------
+    expr: :class:`~dice_parser.Number`
+        The expression to transform
+    ambig_inherit: typing.Literal['left', 'right', None]
+        Inheritance behaviour when encountering a child node with no annotation and a parent with ambiguous types.
+        Can be ``None`` for no inherit, ``'left'`` for leftmost, or ``'right'`` for rightmost.
+    """
     if ambig_inherit not in ('left', 'right', None):
         raise ValueError('ambig_inherit must be "left", "right", or None.')
 
@@ -110,6 +134,16 @@ def simplify_expr_annotations(
 
 
 def simplify_expr(expr: expression.Expression, **kwargs: Any) -> None:
+    """Transforms an expression in place by simplifying it (removing all dice and evaluating branches with respect to
+    annotations).
+
+    Parameters
+    ----------
+    expr: :class:`~dice_parser.Expression`
+        The expression to transform
+    kwargs: Any
+        Arguments that are passed to :func:`simplify_expr_annotations`.
+    """
     simplify_expr_annotations(expr.roll, **kwargs)
 
     def do_simplify(node: expression.Number, first: bool = False) -> tuple[expression.Number, bool]:
@@ -132,6 +166,15 @@ def simplify_expr(expr: expression.Expression, **kwargs: Any) -> None:
 
 
 def tree_map(func: Callable[[T], T], node: T) -> T:
+    """Returns a copy of the tree, with each node replaced with ``func(node)``.
+
+    Parameters
+    ----------
+    func: Callable[[:class:`dice_parser.ast.ChildMixin`], :class:`dice_parser.ast.ChildMixin`]
+        A transformer function
+    node: :class:`dice_parser.ast.ChildMixin`
+        The root of the tree to transform.
+    """
     copied = copy.copy(node)
     for i, child in enumerate(copied.children):
         copied.set_child(i, tree_map(func, child))
@@ -139,6 +182,13 @@ def tree_map(func: Callable[[T], T], node: T) -> T:
 
 
 def leftmost(root: dice_ast.ChildMixin) -> dice_ast.ChildMixin:
+    """Returns the leftmost leaf in this tree.
+
+    Parameters
+    ----------
+    root: :class:`dice_parser.ast.ChildMixin`
+        The root node of the tree
+    """
     left = root
     while left.children:
         left = left.children[0]
@@ -146,6 +196,13 @@ def leftmost(root: dice_ast.ChildMixin) -> dice_ast.ChildMixin:
 
 
 def rightmost(root: dice_ast.ChildMixin) -> dice_ast.ChildMixin:
+    """Returns the rightmost left in this tree.
+
+    Parameters
+    ----------
+    root: :class:`dice_parser.ast.ChildMixin`
+        The root node of this tree
+    """
     right = root
     while right.children:
         right = right.children[-1]
@@ -153,6 +210,15 @@ def rightmost(root: dice_ast.ChildMixin) -> dice_ast.ChildMixin:
 
 
 def dfs(node: T, predicate: Callable[[T], bool]) -> dice_ast.ChildMixin | None:
+    """Returns the first node in the tree such that ``predicate(node)`` is True, searching depth-first left-to-right.
+
+    Parameters
+    ----------
+    node: :class:`dice_parser.ast.ChildMixin`
+        The root node of the tree
+    predicate: Callable[[:class:`dice_parser.ast.ChildMixin`], :class:`bool`]
+        A preficate function
+    """
     if predicate(node):
         return node
     for child in node.children:

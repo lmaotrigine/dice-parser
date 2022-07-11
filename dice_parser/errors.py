@@ -34,11 +34,15 @@ __all__ = ('RollError', 'RollSyntaxError', 'RollValueError', 'TooManyRolls')
 
 
 class RollError(Exception):
+    """Base class for all dice parser errors."""
+
     def __init__(self, msg: str) -> None:
         super().__init__(msg)
 
 
 class RollSyntaxError(RollError):
+    """The roll expression syntax was incorrect."""
+
     def __init__(self, line: int, col: int, got: Token | str, expected: set[str]) -> None:
         self.line = line
         self.col = col
@@ -49,8 +53,12 @@ class RollSyntaxError(RollError):
 
 
 class RollValueError(RollError):
+    """A bad value was passed to an operator."""
+
     pass
 
 
 class TooManyRolls(RollError):
+    """Too many dice rolled (in an individual dice or in rerolls)."""
+
     pass

@@ -59,6 +59,28 @@ __all__ = (
 
 
 class Number(abc.ABC, ast.ChildMixin):
+    """The base class for all expression objects.
+
+    Note that Numbers implement all the methods of a :class:`~dice_parser.ast.ChildMixin`.
+
+    .. container:: operations
+
+        .. describe:: int(x)
+
+            the numerical value of this object with respect to whether it's kept (rounded down)
+
+        .. describe:: float(x)
+
+            the numerical value of this object with respect to whether it's kept
+
+    Attributes
+    ----------
+    kept: :class:`bool`
+        Whether this number was kept or dropped in the final calculation
+    annotation: Optional[:class:`str`]
+        The annotation of this Number, if any
+    """
+
     __slots__ = ('kept', 'annotation')
 
     def __init__(self, kept: bool = True, annotation: str | None = None) -> None:
@@ -67,21 +89,32 @@ class Number(abc.ABC, ast.ChildMixin):
 
     @property
     def number(self) -> int | float:
+        """The numerical value of this object."""
         return sum(n.number for n in self.keptset)
 
     @property
     def total(self) -> int | float:
+        """The numerical value of this object with respect to whether it's kept.
+
+        Generally, this is preferred to be used over ``number``, as this will return 0 if
+        the number was dropped.
+        """
         return self.number if self.kept else 0
 
     @property
     def set(self) -> list[Self]:
+        """Returns the set representation of this object."""
         raise NotImplementedError
 
     @property
     def keptset(self) -> list[Self]:
+        """Returns the set representation of this object, but only including children whose values
+        were not dropped.
+        """
         return [n for n in self.set if n.kept]
 
     def drop(self) -> None:
+        """Makes the value of this node not count towards a total."""
         self.kept = False
 
     def __int__(self) -> int:
@@ -94,14 +127,34 @@ class Number(abc.ABC, ast.ChildMixin):
         return f'<Number total={self.total} kept={self.kept}>'
 
     def set_child(self, index: int, value: Self) -> None:
+        """Sets the child at an index for this Number.
+
+        Parameters
+        ----------
+        index: :class:`int`
+            Which child to set
+        value: :class:`Number`
+            The number to set it to
+        """
         return super().set_child(index, value)
 
     @property
     def children(self) -> list[Self]:
+        """The children of this Number, usually used for traversing the expression tree."""
         raise NotImplementedError
 
 
 class Expression(Number):
+    """Expressions are usually the root of all Number trees.
+
+    Attributes
+    ----------
+    roll: :class:`Number`
+        The roll of this expression
+    comment: Optional[:class:`str`]
+        The comment of this expression
+    """
+
     __slots__ = ('roll', 'comment')
 
     def __init__(self, roll: Number, comment: str | None, **kwargs: Any) -> None:
@@ -130,6 +183,16 @@ class Expression(Number):
 
 
 class Literal(Number):
+    """A literal integer or float.
+
+    Attributes
+    ----------
+    values: List[Union[int, float]]
+        The history of numbers that this Literal has been
+    exploded: :class:`bool`
+        Whether this Literal was a value in a :class:`Die` object that caused it to explode
+    """
+
     __slots__ = ('values', 'exploded')
 
     def __init__(self, value: int | float, **kwargs: Any) -> None:
@@ -150,9 +213,17 @@ class Literal(Number):
         return []
 
     def explode(self) -> None:
+        """Marks that this literal was a value in a :class:`Die` object that caused it to explode."""
         self.exploded = True
 
     def update(self, value: int | float) -> None:
+        """Changes the value this Literal represents.
+
+        Parameters
+        ----------
+        value: Union[:class:`int`, :class:`float`]
+            The new value
+        """
         self.values.append(value)
 
     def __repr__(self) -> str:
@@ -160,6 +231,16 @@ class Literal(Number):
 
 
 class UnOp(Number):
+    """Represents a unary operation.
+
+    Attributes
+    ----------
+    op: :class:`str`
+        The unary operation
+    value: :class:`Number`
+        The subtree that this operation operates on
+    """
+
     __slots__ = ('op', 'value')
 
     UNARY_OPS = {
@@ -193,6 +274,18 @@ class UnOp(Number):
 
 
 class BinOp(Number):
+    """Represents a binary operation.
+
+    Attributes
+    ----------
+    op: :class:`str`
+        The unary operation
+    left: :class:`Number`
+        The left subtree that this operation operates on
+    right: :class:`Number`
+        The right subtree that this operation operates on
+    """
+
     __slots__ = ('op', 'left', 'right')
 
     BINARY_OPS = {
@@ -247,6 +340,16 @@ class BinOp(Number):
 
 
 class Parenthetical(Number):
+    """Represents a value inside parentheses.
+
+    Attributes
+    ----------
+    value: :class:`Number`
+        The subtree inside the parenthesis
+    operations: List[:class:`~dice_parser.SetOperator`]
+        If the value inside the parentheses is a :class:`Set`, the operations to run on it.
+    """
+
     __slots__ = ('value', 'operations')
 
     def __init__(
@@ -279,6 +382,16 @@ class Parenthetical(Number):
 
 
 class Set(Number, Generic[E]):
+    """Represents a set of values.
+
+    Attributes
+    ----------
+    values: List[:class:`Number`]
+        The elements of the set
+    operations: List[:class:`SetOperator`]
+        The operations to run on the set
+    """
+
     __slots__ = ('values', 'operations')
 
     def __init__(
@@ -314,6 +427,20 @@ class Set(Number, Generic[E]):
 
 
 class Dice(Set['Die']):
+    """A set of :class:`Die`
+
+    Attributes
+    ----------
+    num: :class:`int`
+        The number of :class:`Die` in this set of dice
+    size: Union[:class:`int`, :class:`str`]
+        The size of each :class:`Die` in this set of dice
+    values: List[:class:`Die`]
+        The elements of the set
+    operations: List[:class:`~dice_parser.expression.SetOperator`]
+        The operation to run on the set
+    """
+
     __slots__ = ('num', 'size', '_context')
     if TYPE_CHECKING:
         values: list[Die]
@@ -337,6 +464,7 @@ class Dice(Set['Die']):
         return cls(num, size, [Die.new(size, context=context) for _ in range(num)], context=context)
 
     def roll_another(self) -> None:
+        """Rolls another :class:`Die` of the appropriate size and adds it to the set"""
         self.values.append(Die.new(self.size, context=self._context))
 
     @property
@@ -357,6 +485,16 @@ class Dice(Set['Die']):
 
 
 class Die(Number):
+    """Represents a single die.
+
+    Attributes
+    ----------
+    size: Union[:class:`int`, :class:`str`]
+        The number of sides this die has
+    values: List[:class:`~dice_parser.expression.Literal`]
+        The history of values this die has rolled.
+    """
+
     __slots__ = ('size', 'values', '_context')
 
     def __init__(
@@ -415,6 +553,16 @@ class Die(Number):
 
 
 class SetOperator:
+    """Represents an operation on a set.
+
+    Attributes
+    ----------
+    op: :class:`str`
+        The operation to run on the selected elements of the set
+    sels: List[:class:`SetSelector`
+        The selectors that describe how to select operands
+    """
+
     __slots__ = ('op', 'sels')
 
     def __init__(self, op: str, sels: list[SetSelector]) -> None:
@@ -422,10 +570,19 @@ class SetOperator:
         self.sels = sels
 
     @classmethod
-    def from_ast(cls, node: ast.SetOperator) -> SetOperator:
+    def from_ast(cls, node: ast.NodeSetOperator) -> SetOperator:
         return cls(node.op, [SetSelector.from_ast(n) for n in node.sels])
 
     def select(self, target: Set[E], max_targets: int | None = None) -> set[E]:
+        """Selects the operands in a target set.
+
+        Parameters
+        ----------
+        target: :class:`Set`
+            The source of the operands.
+        max_targets: Optional[:class:`int`]
+            The maximum number of targets to select.
+        """
         out = set()
         for selector in self.sels:
             batch_max = None
@@ -437,6 +594,13 @@ class SetOperator:
         return out
 
     def operate(self, target: Set) -> None:
+        """Operates in place on the values in a target set.
+
+        Parameters
+        ----------
+        target: :class:`Set`
+            The source of the operands.
+        """
         operations = {
             'k': self.keep,
             'p': self.drop,
@@ -511,6 +675,16 @@ class SetOperator:
 
 
 class SetSelector:
+    """Represents a selection on a :class:`Set`
+
+    Attributes
+    ----------
+    cat: Optional[:class:`str`]
+        The type of selection (lowest, highest, literal, etc)
+    num: :class:`int`
+        The number to select (highest/lowest etc N or literal N)
+    """
+
     __slots__ = ('cat', 'num')
 
     def __init__(self, cat: str | None, num: int) -> None:
@@ -518,10 +692,24 @@ class SetSelector:
         self.num = num
 
     @classmethod
-    def from_ast(cls, node: ast.SetSelector) -> Self:
+    def from_ast(cls, node: ast.NodeSetSelector) -> Self:
         return cls(node.cat, node.num)
 
     def select(self, target: Set[E], max_targets: int | None = None) -> set[E]:
+        """Selects operands from a target set.
+
+        Parameters
+        ----------
+        target: :class:`Set`
+            The source of the operands
+        max_targets: Optional[:class:`int`]
+            The maximum number of targets to select.
+
+        Returns
+        -------
+        :class:`Set`
+            The targets in the set
+        """
         selectors = {
             'l': self.lowestn,
             'h': self.highestn,

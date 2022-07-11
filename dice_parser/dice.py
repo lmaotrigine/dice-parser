@@ -53,33 +53,86 @@ E = TypeVar('E', bound=Number)
 
 
 class CritType(IntEnum):
+    """An enum representing the crit type of a roll."""
+
     NONE = 0
     CRIT = 1
     FAIL = 2
 
 
 class AdvType(IntEnum):
+    """An enum representing the advantage a roll should be made at."""
+
     NONE = 0
     ADV = 1
     DIS = -1
 
 
 class RollContext:
+    """Used to track information about rolls to ensure all rolls halt eventually.
+
+    Attributes
+    ----------
+    max_rolls: :class:`int`
+        The maximum number of rolls allowed per context invocation
+    """
+
     def __init__(self, max_rolls: int = 1000) -> None:
         self.max_rolls = max_rolls
         self.rolls = 0
         self.reset()
 
     def reset(self) -> None:
+        """Called at the start of each new roll."""
         self.rolls = 0
 
     def count_roll(self, n: int = 1) -> None:
+        """Called each time a die is about to be rolled.
+
+        Parameters
+        ----------
+        n: :class:`int`
+            The number of rolls about to be made
+
+        Raises
+        ------
+        TooManyRolls
+            The number of rolls exceed the maximum rolls allowed in this context
+        """
         self.rolls += n
         if self.rolls > self.max_rolls:
             raise TooManyRolls('Too many dice rolled.')
 
 
 class RollResult:
+    """Holds information about the result of a roll.
+
+    Instances should generally not be constructed manually.
+
+    .. container:: operations
+
+        .. describe:: int(x)
+
+            Return the integer result of the roll (rounded towards 0).
+
+        .. describe:: str(x)
+
+            Return the string result of the roll.
+
+        .. describe:: float(x)
+
+            Return the result of the roll without rounding.
+
+    Attributes
+    ----------
+    ast: :class:`ast.Node`
+        The abstract syntax tree of the dice expression that was rolled
+    expr: :class:`Expression`
+        The Expression representation of the result of the roll.
+    comment: Optional[:class:`str`]
+        If `allow_comments` was True and a comment was found, the comment. Otherwise, None.
+    """
+
     def __init__(self, the_ast: ast.Node, the_roll: Expression, stringifier: Stringifier) -> None:
         self.ast = the_ast
         self.expr = the_roll
@@ -88,14 +141,20 @@ class RollResult:
 
     @property
     def total(self) -> int:
+        """The integer result of the roll (rounded towards 0)."""
         return int(self.expr.total)
 
     @property
     def result(self) -> str:
+        """The string result of the roll. Equivalent to ``stringifier.stringify(self.expr)``."""
         return self.stringifier.stringify(self.expr)
 
     @property
     def crit(self) -> CritType:
+        """If the leftmost node was Xd20kh1, returns :class:`CritType.CRIT` if the roll was a 20 and
+        :class:`CritType.FAIL` if the roll was a 1.
+        Returns :class:`CritType.NONE` otherwise.
+        """
         left = self.expr
         while left.children:
             left = left.children[0]
@@ -125,6 +184,14 @@ class RollResult:
 
 
 class Roller:
+    """The main class responsible for parsing dice into an AST and evaluating that AST.
+
+    Attributes
+    ----------
+    context: :class:`RollContext`
+        The roll context associated with this roller.
+    """
+
     def __init__(self, context: RollContext | None = None) -> None:
         if context is None:
             context = RollContext()
@@ -135,14 +202,14 @@ class Roller:
         _nodes = {
             ast.Expression: self._eval_expression,
             ast.AnnotatedNumber: self._eval_annotatednumber,
-            ast.Literal: self._eval_literal,
+            ast.LiteralNode: self._eval_literal,
             ast.Parenthetical: self._eval_parenthetical,
             ast.UnOp: self._eval_unop,
             ast.BinOp: self._eval_binop,
             ast.OperatedSet: self._eval_operatedset,
             ast.NumberSet: self._eval_numberset,
             ast.OperatedDice: self._eval_operateddice,
-            ast.Dice: self._eval_dice,
+            ast.DiceNode: self._eval_dice,
         }
         return _nodes[_type]  # type: ignore
 
@@ -153,6 +220,25 @@ class Roller:
         allow_comments: bool = False,
         advantage: AdvType = AdvType.NONE,
     ) -> RollResult:
+        """Rolls the dice.
+
+        Parameters
+        ----------
+        expr: Union[:class:`str`, :class:`ast.Node`]
+            The dice expression
+        stringifier: :class:`Stringifier`
+            The stringifier to stringify the result. Defaults to :class:`MarkdownStringifier`
+        allow_comments: :class:`bool`
+            Whether to parse for comments after the main roll expression
+            (disables cache, can lead to possible performance issues)
+        advantage: :class:`AdvType`
+            If the roll should be made at (dis)advantage. Only applies if the leftmost node s 1d20
+
+        Returns
+        -------
+        :class:`RollResult`
+            The result of the roll
+        """
         if stringifier is None:
             stringifier = MarkdownStringifier()
         self.context.reset()
@@ -168,6 +254,21 @@ class Roller:
         return RollResult(dice_tree, dice_expr, stringifier)
 
     def parse(self, expr: str, allow_comments: bool = False) -> ast.Expression:
+        """Parses a dice expression into an AST.
+
+        Parameters
+        ----------
+        expr: :class:`str`
+            The dice to roll
+        allow_comments: :class:`bool`
+            Whether to parse for comments after the main roll expression
+            (disables cache, can lead to possible performance issues)
+
+        Returns
+        -------
+        :class:`ast.Expression`
+            An AST representing the dice expression.
+        """
         try:
             if not allow_comments:
                 return self._parse_no_comment(expr)
@@ -214,7 +315,7 @@ class Roller:
         target.annotation = ''.join(node.annotations)
         return target
 
-    def _eval_literal(self, node: ast.Literal) -> Literal:
+    def _eval_literal(self, node: ast.LiteralNode) -> Literal:
         return Literal(node.value)
 
     def _eval_parenthetical(self, node: ast.Parenthetical) -> Parenthetical:
@@ -240,5 +341,5 @@ class Roller:
     def _eval_operateddice(self, node: ast.OperatedDice) -> Set[Die]:
         return self._eval_operatedset(node)
 
-    def _eval_dice(self, node: ast.Dice) -> Dice:
+    def _eval_dice(self, node: ast.DiceNode) -> Dice:
         return Dice.new(node.num, node.size, context=self.context)

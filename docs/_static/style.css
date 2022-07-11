@@ -1,0 +1,16 @@
+.container.operations {
+  padding: 10px;
+  border: 1px solid #0c0c0d;
+  margin-bottom: 20px;
+}
+
+.container.operations::before {
+  content: 'Supported Operations';
+  color: #f9f9fa;
+  display: block;
+  padding-bottom: 0.5em;
+}
+
+.container.operations > dl.describe > dt {
+  background-color: var(--color-api-background);
+}

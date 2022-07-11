@@ -36,6 +36,10 @@ from lark.lexer import Token
 from lark.visitors import Transformer
 
 
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
+
 class RollTransformer(Transformer):
     _comma = object()
 
@@ -60,14 +64,14 @@ class RollTransformer(Transformer):
     def numexpr(self, num_anno) -> AnnotatedNumber:
         return AnnotatedNumber(*num_anno)
 
-    def literal(self, num) -> Literal:
-        return Literal(*num)
+    def literal(self, num) -> LiteralNode:
+        return LiteralNode(*num)
 
     def set(self, opset) -> OperatedSet:
         return OperatedSet(*opset)
 
-    def set_op(self, opsel) -> SetOperator:
-        return SetOperator.new(*opsel)
+    def set_op(self, opsel) -> NodeSetOperator:
+        return NodeSetOperator.new(*opsel)
 
     def setexpr(self, the_set) -> Parenthetical | NumberSet:
         if len(the_set) == 1 and the_set[-1] is not self._comma:
@@ -79,53 +83,81 @@ class RollTransformer(Transformer):
     def dice(self, opice) -> OperatedDice:
         return OperatedDice(*opice)
 
-    def dice_op(self, opsel) -> SetOperator:
-        return SetOperator.new(*opsel)
+    def dice_op(self, opsel) -> NodeSetOperator:
+        return NodeSetOperator.new(*opsel)
 
-    def diceexpr(self, dice) -> Dice:
+    def diceexpr(self, dice) -> DiceNode:
         if len(dice) == 1:
-            return Dice(1, *dice)
-        return Dice(*dice)
+            return DiceNode(1, *dice)
+        return DiceNode(*dice)
 
-    def selector(self, sel) -> SetSelector:
-        return SetSelector(*sel)
+    def selector(self, sel) -> NodeSetSelector:
+        return NodeSetSelector(*sel)
 
     def comma(self, _) -> Any:
         return self._comma
 
 
 class ChildMixin:
+    """A mixin that tree nodes must implement to support tree traveral utilities."""
+
     @property
-    def children(self) -> list[ChildMixin]:
+    def children(self) -> list[Self]:
+        """A list of this node's children."""
         raise NotImplementedError
 
     @property
-    def left(self) -> ChildMixin | None:
+    def left(self) -> Self | None:
+        """The node's leftmost child, if any."""
         return self.children[0] if self.children else None
 
     @left.setter
-    def left(self, value: ChildMixin) -> None:
+    def left(self, value: Self) -> None:
         self.set_child(0, value)
 
     @property
-    def right(self) -> ChildMixin | None:
+    def right(self) -> Self | None:
+        """The node's rightmost child, if any."""
         return self.children[-1] if self.children else None
 
     @right.setter
-    def right(self, value: ChildMixin) -> None:
+    def right(self, value: Self) -> None:
         self.set_child(-1, value)
 
     def _child_set_check(self, index: int) -> None:
         if index > (len(self.children) - 1) or index < -len(self.children):
             raise IndexError
 
-    def set_child(self, index: int, value: ChildMixin) -> None:
+    def set_child(self, index: int, value: Self) -> None:
+        """Sets the child at a specific index of the object.
+
+        Parameters
+        ----------
+        index: :class:`int`
+            The index of the value to set
+        value: :class:`ChildMixin`
+            The new value to set it to
+        """
         self._child_set_check(index)
         raise NotImplementedError
 
 
 class Node(abc.ABC, ChildMixin):
+    """The base class for all AST nodes.
+
+    A node has no specific attributes, but supports all methods in :class:`~dice_parser.ast.ChildMixin` for traversal.
+    """
+
     def set_child(self, index: int, value: Node) -> None:
+        """Sets the a child at a specific index of this Node.
+
+        Parameters
+        ----------
+        index: :class:`int`
+            Which child to set
+        value: :class:`Node`
+            The Node to set it to
+        """
         super().set_child(index, value)
 
     @property
@@ -137,6 +169,16 @@ class Node(abc.ABC, ChildMixin):
 
 
 class Expression(Node):
+    """Expressions are usually the root of all ASTs.
+
+    Attributes
+    ----------
+    roll: :class:`Node`
+        The subtree representing the expression's roll.
+    comment: Optional[:class:`str`]
+        The comment of this expression.
+    """
+
     __slots__ = ('roll', 'comment')
 
     def __init__(self, roll: Node, comment: str | None = None) -> None:
@@ -158,6 +200,16 @@ class Expression(Node):
 
 
 class AnnotatedNumber(Node):
+    """Represents a value with an annotation.
+
+    Attributes
+    ----------
+    value: :class:`Node`
+        The subtree representing the annotated value
+    annotations: List[:class:`str`]
+        The annotation on the value
+    """
+
     __slots__ = ('value', 'annotations')
 
     def __init__(self, value: Node, *annotations: Token | str) -> None:
@@ -177,7 +229,14 @@ class AnnotatedNumber(Node):
         return f'{self.value} {"".join(self.annotations)}'
 
 
-class Literal(Node):
+class LiteralNode(Node):
+    """
+    Attributes
+    ----------
+    value: Union[:class:`int`, :class:`float`]
+        The literal number represented.
+    """
+
     __slots__ = ('value',)
 
     def __init__(self, value: Token | int | float) -> None:
@@ -196,6 +255,13 @@ class Literal(Node):
 
 
 class Parenthetical(Node):
+    """
+    Attributes
+    ----------
+    value: :class:`Node`
+        The subtree inside the parentheses
+    """
+
     __slots__ = ('value',)
 
     def __init__(self, value: Node) -> None:
@@ -215,6 +281,15 @@ class Parenthetical(Node):
 
 
 class UnOp(Node):
+    """
+    Attributes
+    ----------
+    op: :class:`str`
+        The unary operation
+    value: :class:`Node`
+        The subtree that the operation operates on
+    """
+
     __slots__ = ('op', 'value')
 
     def __init__(self, op: Token | str, value: Node) -> None:
@@ -235,6 +310,17 @@ class UnOp(Node):
 
 
 class BinOp(Node):
+    """
+    Attributes
+    ----------
+    op: :class:`str`
+        The binary operation
+    left: :class:`Node`
+        The left subtree that the operation operates on
+    right: :class:`Node`
+        The right subtree that the operation operates on
+    """
+
     __slots__ = ('op', 'left', 'right')
 
     if TYPE_CHECKING:
@@ -262,27 +348,45 @@ class BinOp(Node):
         return f'{self.left} {self.op} {self.right}'
 
 
-class SetOperator:
+class NodeSetOperator:
+    """
+    Attributes
+    ----------
+    op: :class:`str`
+        The operation to run on the selected elements of the set
+    sets: List[:class:`SetSelector`]
+        The selectors that describe how to select operands
+    """
+
     __slots__ = ('op', 'sels')
 
     IMMEDIATE = {'mi', 'ma'}
 
-    def __init__(self, op: Token | str, sels: list[SetSelector]) -> None:
+    def __init__(self, op: Token | str, sels: list[NodeSetSelector]) -> None:
         self.op = str(op)
         self.sels = sels
 
     @classmethod
-    def new(cls, op: Token | str, sel: SetSelector) -> SetOperator:
+    def new(cls, op: Token | str, sel: NodeSetSelector) -> NodeSetOperator:
         return cls(op, [sel])
 
-    def add_sels(self, sels: list[SetSelector]) -> None:
+    def add_sels(self, sels: list[NodeSetSelector]) -> None:
         self.sels.extend(sels)
 
     def __str__(self) -> str:
         return ''.join([f'{self.op}{sel}' for sel in self.sels])
 
 
-class SetSelector:
+class NodeSetSelector:
+    """
+    Attributes
+    ----------
+    cat: Optional[:class:`str`]
+        The type of selection (lowest, highest, literal, etc)
+    num: :class:`int`
+        The number to select (highest/lowest etc N or literal N)
+    """
+
     __slots__ = ('cat', 'num')
 
     def __init__(self, cat: Token | str | None, num: int) -> None:
@@ -296,9 +400,18 @@ class SetSelector:
 
 
 class OperatedSet(Node):
+    """
+    Attributes
+    ----------
+    value: :class:`NumberSet`
+        The set to be operated on
+    operations: Sequence[:class:`SetOperator`]
+        The operations to run on the set
+    """
+
     __slots__ = ('value', 'operations')
 
-    def __init__(self, the_set: NumberSet | Dice, *operations: SetOperator) -> None:
+    def __init__(self, the_set: NumberSet | DiceNode, *operations: NodeSetOperator) -> None:
         super().__init__()
         self.value = the_set
         self.operations = list(operations)
@@ -315,7 +428,7 @@ class OperatedSet(Node):
     def _simplify_operations(self) -> None:
         new_operations = []
         for operation in self.operations:
-            if operation.op in SetOperator.IMMEDIATE or not new_operations:
+            if operation.op in NodeSetOperator.IMMEDIATE or not new_operations:
                 new_operations.append(operation)
             else:
                 last_op = new_operations[-1]
@@ -330,6 +443,13 @@ class OperatedSet(Node):
 
 
 class NumberSet(Node):
+    """
+    Attributes
+    ----------
+    values: List[`Node`]
+        The elements of the set
+    """
+
     __slots__ = ('values',)
 
     def __init__(self, values: list[Node]) -> None:
@@ -357,11 +477,20 @@ class NumberSet(Node):
 class OperatedDice(OperatedSet):
     __slots__ = ()
 
-    def __init__(self, the_dice: Dice, *operations: SetOperator) -> None:
+    def __init__(self, the_dice: DiceNode, *operations: NodeSetOperator) -> None:
         super().__init__(the_dice, *operations)
 
 
-class Dice(Node):
+class DiceNode(Node):
+    """
+    Attributes
+    ---------
+    num: :class:`int`
+        The number of dice to roll
+    size: :class:`int`
+        The number of sides in each die to roll
+    """
+
     __slots__ = ('num', 'size')
 
     def __init__(self, num: Token | int, size: Token | int | str) -> None:

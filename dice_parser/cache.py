@@ -69,6 +69,7 @@ MISSING: Any = _MissingSentinel()
 
 
 class LFUCache(MutableMapping[K, V]):
+    """Least Frequently Used (LFU) cache implementation."""
 
     __size = _DefaultSize()
 

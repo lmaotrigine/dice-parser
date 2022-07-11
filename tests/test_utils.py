@@ -120,7 +120,7 @@ class TestTreeMap:
         tree = parse('1d20 + 4d6 + 3')
 
         def mapper(node):
-            if isinstance(node, ast.Dice):
+            if isinstance(node, ast.DiceNode):
                 node.num = node.num * 2
             return node
 
@@ -151,8 +151,8 @@ class TestTreeMap:
         tree = parse('(1d6, 1d6)kh1')
 
         def mapper(node):
-            if isinstance(node, ast.Dice):
-                return ast.Dice(node.num * 2, node.size)
+            if isinstance(node, ast.DiceNode):
+                return ast.DiceNode(node.num * 2, node.size)
             return node
 
         mapped = utils.tree_map(mapper, tree)
