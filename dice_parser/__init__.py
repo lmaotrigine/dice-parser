@@ -37,4 +37,4 @@ _roller = Roller()
 roll = _roller.roll
 parse = _roller.parse
 
-__verion__ = '0.1.0a'
+__verion__ = '0.1.0'

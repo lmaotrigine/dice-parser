@@ -43,3 +43,39 @@ jobs:
         run: |
           cd docs
           sphinx-build -b html -D language=en -a -T -W --keep-going . _build/html
+      
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: distributions
+          path: dist/
+
+  create-release:
+    name: Create Release
+    needs: [ dists-and-docs ]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/')
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: distributions
+          path: dist
+      
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -x
+          assets=()
+          for asset in ./dist/*.{whl,tar.gz}; do
+            assets+=("-a" "$asset")
+          done
+          tag_name="${GITHUB_REF##*/}"
+          hub release create "${assets[@]}" -F "CHANGELOG.md" "$tag_name"
