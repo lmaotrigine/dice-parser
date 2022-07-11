@@ -53,7 +53,7 @@ Enumerations
   .. attribute:: FAIL
       :type: int
 
-      Equivalent to ``-1``. Represents a critical fail (a natural 1 on a d20).
+      Equivalent to ``2``. Represents a critical fail (a natural 1 on a d20).
 
 Stringifiers
 ------------
