@@ -39,12 +39,14 @@ _roller = Roller()
 roll = _roller.roll
 parse = _roller.parse
 
+
 class VersionInfo(typing.NamedTuple):
     major: int
     minor: int
     micro: int
     releaselevel: typing.Literal['alpha', 'beta', 'candidate', 'final']
     serial: int
+
 
 __version__ = '0.1.0a'
 

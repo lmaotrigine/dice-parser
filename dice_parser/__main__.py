@@ -28,6 +28,7 @@
 import argparse
 import platform
 import sys
+
 import pkg_resources
 
 import dice_parser
@@ -59,7 +60,9 @@ def __d20__():
 
     args = parser.parse_args()
     adv_type = args.adv or args.dis or dice_parser.AdvType.NONE
-    roll_result = dice_parser.roll(args.expr, allow_comments=args.allow_comments, advantage=adv_type)
+    roll_result = dice_parser.roll(
+        args.expr, allow_comments=args.allow_comments, advantage=adv_type
+    )
     print(roll_result)
 
 
@@ -82,6 +85,7 @@ def show_version() -> None:
     uname = platform.uname()
     entries.append(f'- system info: {uname.system} {uname.release} {uname.version}')
     print('\n'.join(entries))
+
 
 if __name__ == '__main__':
     try:
