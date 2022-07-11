@@ -10,6 +10,7 @@ Welcome to dice-parser's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   quickstart
    api
    expression
    ast

@@ -145,7 +145,7 @@ Selectors select from the remaining kept values in a set.
 
 The default stringifier formats the result of each roll in Markdown, which may not be useful in your application.
 To change this behaviour, you can create a subclass of [`dice_parser.Stringifier`](dice_parser/stringifiers.py)
-(or `dice_parser.SimpleStringifier` as a starting point), and implement the `_str_*` methods to customize how your dice
+(or `dice_parser.SimpleStringifier` as a starting point), and implement the `str_*` methods to customize how your dice
 tree is stringified
 
 Then, simply pass an instance of your stringifier into the `roll()` function!
@@ -153,13 +153,13 @@ Then, simply pass an instance of your stringifier into the `roll()` function!
 ```python
 >>> import dice_parser
 >>> class MyStringifier(dice_parser.SimpleStringifier):
-...     def _stringify(self, node):
+...     def stringify_node(self, node):
 ...         if not node.kept:
 ...             return 'X'
-...         return super()._stringify(node)
+...         return super().stringify_node(node)
 ...
-...     def _str_expression(self, node):
-...         return f'The result of the roll {self._stringify(node.roll)} was {int(node.total)}'
+...     def str_expression(self, node):
+...         return f'The result of the roll {self.stringify_node(node.roll)} was {int(node.total)}'
 ...
 >>> result = dice_parser.roll('4d6e6kh3', stringifier=MyStringifier())
 >>> str(result)
