@@ -28,6 +28,7 @@ docs = ["Sphinx", "sphinxcontrib-websupport", "furo"]
 
 [tool.poetry.scripts]
 d20 = 'dice_parser.__main__:__d20__'
+version = 'dice_parser.__main__:show_version'
 
 [tool.black]
 line-length = 100
@@ -59,15 +60,10 @@ reportUntypedFunctionDecorator = "error"
 reportUnnecessaryTypeIgnoreComment = "warning"
 
 [tool.coverage.run]
-omit = [
-  "dice_parser.__main__.py"
-]
+omit = ["dice_parser.__main__.py"]
 
 [tool.coverage.report]
-exclude_lines = [
-  "pragma: no cover",
-  "@overload"
-]
+exclude_lines = ["pragma: no cover", "@overload"]
 
 [build-system]
 requires = ["poetry-core"]

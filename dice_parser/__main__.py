@@ -25,16 +25,15 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import argparse
+import platform
 import sys
+import pkg_resources
 
-from dice_parser import roll
+import dice_parser
 
 
 def __d20__():
-    import argparse
-
-    from dice_parser import AdvType
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-c', '--allow-comments', action='store_true', help='Allow comments in the input'
@@ -45,7 +44,7 @@ def __d20__():
         '--adv',
         '--advantage',
         action='store_const',
-        const=AdvType.ADV,
+        const=dice_parser.AdvType.ADV,
         help='Roll with advantage',
     )
     group.add_argument(
@@ -53,21 +52,41 @@ def __d20__():
         '--dis',
         '--disadvantage',
         action='store_const',
-        const=AdvType.DIS,
+        const=dice_parser.AdvType.DIS,
         help='Roll with disadvantage',
     )
     parser.add_argument('expr', nargs='?', help='Dice expression', default='d20')
 
     args = parser.parse_args()
-    adv_type = args.adv or args.dis or AdvType.NONE
-    roll_result = roll(args.expr, allow_comments=args.allow_comments, advantage=adv_type)
+    adv_type = args.adv or args.dis or dice_parser.AdvType.NONE
+    roll_result = dice_parser.roll(args.expr, allow_comments=args.allow_comments, advantage=adv_type)
     print(roll_result)
 
+
+def show_version() -> None:
+    version_info = sys.version_info
+    dice_version_info = dice_parser.version_info
+    entries: list[str] = [
+        f'- Python v{version_info.major}.{version_info.minor}.{version_info.micro}'
+        f'-{version_info.releaselevel}.{version_info.serial}',
+        f'- dice-parser v{dice_version_info.major}.{dice_version_info.minor}.'
+        f'{dice_version_info.micro}-{dice_version_info.releaselevel}.{dice_version_info.serial}',
+    ]
+    if dice_version_info.releaselevel != 'final':
+        try:
+            pkg = pkg_resources.get_distribution('dice_parser')
+        except pkg_resources.DistributionNotFound:
+            pass
+        else:
+            entries.append(f'    - dice-parser pkg_resources: v{pkg.version}')
+    uname = platform.uname()
+    entries.append(f'- system info: {uname.system} {uname.release} {uname.version}')
+    print('\n'.join(entries))
 
 if __name__ == '__main__':
     try:
         while True:
-            roll_result = roll(input('> '), allow_comments=True)
+            roll_result = dice_parser.roll(input('> '), allow_comments=True)
             print(str(roll_result))
     except EOFError:
         sys.exit(0)

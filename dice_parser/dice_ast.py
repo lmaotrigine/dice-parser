@@ -354,7 +354,7 @@ class NodeSetOperator:
     ----------
     op: :class:`str`
         The operation to run on the selected elements of the set
-    sets: List[:class:`SetSelector`]
+    sels: List[:class:`NodeSetSelector`]
         The selectors that describe how to select operands
     """
 
@@ -405,7 +405,7 @@ class OperatedSet(Node):
     ----------
     value: :class:`NumberSet`
         The set to be operated on
-    operations: Sequence[:class:`SetOperator`]
+    operations: Sequence[:class:`NodeSetOperator`]
         The operations to run on the set
     """
 
@@ -446,7 +446,7 @@ class NumberSet(Node):
     """
     Attributes
     ----------
-    values: List[`Node`]
+    values: List[:class:`Node`]
         The elements of the set
     """
 

@@ -25,6 +25,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import typing
+
 from . import dice_ast as ast  # type: ignore
 from . import utils as utils
 from .dice import *
@@ -37,4 +39,13 @@ _roller = Roller()
 roll = _roller.roll
 parse = _roller.parse
 
-__verion__ = '0.1.0a'
+class VersionInfo(typing.NamedTuple):
+    major: int
+    minor: int
+    micro: int
+    releaselevel: typing.Literal['alpha', 'beta', 'candidate', 'final']
+    serial: int
+
+__version__ = '0.1.0a'
+
+version_info: VersionInfo = VersionInfo(major=0, minor=1, micro=0, releaselevel='alpha', serial=0)
